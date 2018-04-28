@@ -15,7 +15,11 @@
  */
 package com.example.android.quakereport;
 
+import android.app.LoaderManager;
+import android.content.AsyncTaskLoader;
+import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -27,19 +31,17 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EarthquakeActivity extends AppCompatActivity {
+public class EarthquakeActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<Earthquake>>  {
 
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
     static final String URL_KEY = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&minmag=5&limit=20";
     private EarthquakeAdapter mAdapter;
+    private static final int EARTHQUAKE_LOADER_ID = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
-
-        EarthQuakeAsync aTask = new EarthQuakeAsync();
-        aTask.execute(URL_KEY);
 
         // Find a reference to the {@link ListView} in the layout
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
@@ -62,27 +64,29 @@ public class EarthquakeActivity extends AppCompatActivity {
             }
         });
 
+        LoaderManager loaderManager = getLoaderManager();
+        loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+
     }
 
-    private class EarthQuakeAsync extends AsyncTask<String, Void, List<Earthquake>> {
+    @Override
+    public Loader<List<Earthquake>> onCreateLoader(int i, Bundle bundle) {
+        return new EarthquakeLoader(this, URL_KEY);
+    }
 
-        @Override
-        protected List<Earthquake> doInBackground(String... urls) {
-            if (urls.length < 1 || urls[0] == null) {
-                return null;
-            }
-
-            final List<Earthquake> earthquakes = QueryUtils.fetchEarthquakeData(urls[0]);
-            return earthquakes;
+    @Override
+    public void onLoadFinished(Loader<List<Earthquake>> loader, List<Earthquake> data) {
+        mAdapter.clear();
+        if (data != null || !data.isEmpty()){
+            mAdapter.addAll(data);
         }
 
-        @Override
-        protected void onPostExecute(List<Earthquake> data) {
-            mAdapter.clear();
-            if (data != null || !data.isEmpty()){
-                mAdapter.addAll(data);
-            }
-        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<List<Earthquake>> loader) {
+        mAdapter.clear();
+
     }
 
 }
