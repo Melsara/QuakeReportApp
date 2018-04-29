@@ -16,8 +16,11 @@
 package com.example.android.quakereport;
 
 import android.app.LoaderManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -38,11 +41,13 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
     private EarthquakeAdapter mAdapter;
     private static final int EARTHQUAKE_LOADER_ID = 1;
     TextView emptyView;
+    ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
+        progressBar = (ProgressBar) findViewById(R.id.progress_bar);
 
         // Find a reference to the {@link ListView} in the layout
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
@@ -67,10 +72,23 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
             }
         });
 
-        LoaderManager loaderManager = getLoaderManager();
-        Log.i("initLoader()", "initLoader() is about to be called");
-        loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+        ConnectivityManager cm =
+                (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if (isConnected) {
+            LoaderManager loaderManager = getLoaderManager();
+            Log.i("initLoader()", "initLoader() is about to be called");
+            loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+
+        } else {
+            progressBar.setVisibility(View.GONE);
+            emptyView.setText(R.string.no_internet);
+
+        }
 
     }
 
@@ -82,15 +100,16 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
     }
 
     @Override
-    public void onLoadFinished(Loader<List<Earthquake>> loader, List<Earthquake> data) {
+    public void onLoadFinished(Loader<List<Earthquake>> loader, List<Earthquake> earthquakes) {
         Log.i("onLoadFinished()", "onLoadFinished() was called");
-        mAdapter.clear();
-        if (data != null || !data.isEmpty()){
-            mAdapter.addAll(data);
-        }
-        emptyView.setText(R.string.empty_view);
-        ProgressBar progressBar = (ProgressBar) findViewById(R.id.progress_bar);
         progressBar.setVisibility(View.GONE);
+        mAdapter.clear();
+        if (earthquakes != null && !earthquakes.isEmpty()){
+            mAdapter.addAll(earthquakes);
+        } else {
+            emptyView.setText(R.string.empty_view);
+        }
+
     }
 
     @Override
